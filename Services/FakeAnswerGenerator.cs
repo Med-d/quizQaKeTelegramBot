@@ -1,11 +1,33 @@
 using System;
 using System.Collections.Generic;
+using quizQaKeTelegramBot.DataBase.Models;
 
 namespace quizQaKeTelegramBot.Services;
 
 public class FakeAnswerGenerator
 {
-    private readonly string[] AdditionalNames = ["Логвинов Максим Олегович", "Раткин Кирилл Павлович", "Осипов Алексей Сергеевич"];
+    private readonly Question[] AdditionalNames = [
+        new(){
+            Fact = "",
+            Hobby = "",
+            Answer = "Логвинов Максим Олегович",
+            FirstClue = "Мужской",
+            SecondClue = ""
+        },
+        new(){
+            Fact = "",
+            Hobby = "",
+            Answer = "Раткин Кирилл Павлович",
+            FirstClue = "Мужской",
+            SecondClue = ""
+        },
+        new(){
+            Fact = "",
+            Hobby = "",
+            Answer = "Алиферова Злата Евгеньевна",
+            FirstClue = "Женский",
+            SecondClue = ""
+        }];
 
     private readonly DataBase.IUnitOfWork unitOfWork;
 
@@ -14,15 +36,35 @@ public class FakeAnswerGenerator
         this.unitOfWork = unitOfWork;
     }
 
-    public List<string> GenerateFakeAnswers(int count)
+    public List<string> GenerateFakeAnswers(int count, Question forQuestion)
     {
-        var available = new HashSet<string>(AdditionalNames);
-        var realAnswers = unitOfWork.Questions.GetAll().Select(q => q.Answer).Where(a => !string.IsNullOrWhiteSpace(a));
-        foreach (var ans in realAnswers)
-            available.Add(ans);
+        var available = new List<Question>(AdditionalNames);
+        available.AddRange(unitOfWork.Questions.GetAll().Where(q => !q.Answer.Equals(forQuestion.Answer) && !string.IsNullOrWhiteSpace(q.Answer)));
+
+        // Группируем по FirstClue
+        var male = available.Where(q => q.FirstClue == "Мужской").ToList();
+        var female = available.Where(q => q.FirstClue == "Женский").ToList();
+
+        // Определяем, какой пол у forQuestion
+        var preferOpposite = forQuestion.FirstClue == "Мужской" ? female : male;
+        var preferSame = forQuestion.FirstClue == "Мужской" ? male : female;
 
         var rnd = new Random();
-        var result = available.OrderBy(_ => rnd.Next()).Take(count).ToList();
+        var result = new List<string>();
+
+        var countOpposite = (int)Math.Ceiling(count / 2d);
+
+        // Сначала добавляем ответы с противоположным полом
+        foreach (var q in preferOpposite.OrderBy(_ => rnd.Next()).Take(Math.Min(countOpposite, preferOpposite.Count)))
+            result.Add(q.Answer);
+
+        // Если не хватает, добавляем с тем же полом
+        if (result.Count < count)
+        {
+            foreach (var q in preferSame.OrderBy(_ => rnd.Next()).Take(count - result.Count))
+                result.Add(q.Answer);
+        }
+
         return result;
     }
 }

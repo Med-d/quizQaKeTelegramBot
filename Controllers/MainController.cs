@@ -15,8 +15,15 @@ public class MainController(IUnitOfWork unitOfWork, CsvQuestionsExporter csvExpo
         public required Answer Answer { get; set; }
     }
 
+    private record GagUnknown
+    {
+        public int CountOfUnknowns { get; set; } = 0;
+    }
+
     [State]
     private Answering? answeringState;
+    [State]
+    private GagUnknown? gagUnknown;
     
     private readonly IUnitOfWork unitOfWork = unitOfWork;
     private readonly CsvQuestionsExporter csvExporter = csvExporter;
@@ -54,7 +61,7 @@ public class MainController(IUnitOfWork unitOfWork, CsvQuestionsExporter csvExpo
 
         // Приветственное сообщение
         await Send(
-            "Добро пожаловать на квиз!\n\n" +
+            "<b>Добро пожаловать на квиз!</b>\n\n" +
             "Вам будут задаваться вопросы о ваших коллегах. На каждый вопрос у вас есть 2 попытки и возможность получить 2 подсказки.\n" +
             "Максимальный балл за вопрос — 4:\n" +
             "• За новую попытку — минус 1 балл\n" +
@@ -109,8 +116,8 @@ public class MainController(IUnitOfWork unitOfWork, CsvQuestionsExporter csvExpo
         }
 
         PushLL("<b>Внимание, вопрос! Кто это?</b>");
-
-        PushL($"Факт: {question.Fact}\nХобби: {question.Hobby}\n{attemptsInfo}\n{cluesInfo}{cluesText}");
+        PushLL($"{attemptsInfo}");
+        PushL($"Факт: {question.Fact}\nХобби: {question.Hobby}\n\n{cluesInfo}{cluesText}");
         Button("Подсказка (-1 балл)", Q(UseClue, question, answer));
 
         await Send();
@@ -177,10 +184,42 @@ public class MainController(IUnitOfWork unitOfWork, CsvQuestionsExporter csvExpo
         }
     }
 
+    [On(Handle.Exception)]
+    public async Task ExceptionHandler()
+    {
+        await Send("Произошла какая-то ошибка. Обратись к @mmeddl или организатору");
+    }
+
     [Action]
     public async Task Unknow()
     {
-        await Send("Ничего не понял. Если пытаешься ответить на вопрос - начни с /question");
+        var tip = "Если пытаешься ответить на вопрос - начни с /question";
+
+        if (gagUnknown is null) gagUnknown = new GagUnknown();
+
+        switch (gagUnknown.CountOfUnknowns)
+        {
+            case 0:
+                await Send($"Ничего не понял. {tip}");
+                break;
+            case 1:
+                await Send($"Кажется ты пытаешься меня протестировать? Не стоит, оставь силы для работы. {tip}");
+                break;
+            case 2:
+                await Send($"Хватит меня тестировать, это плохо закончится! {tip}");
+                break;
+            case 3:
+                await Send($"Я упал. Дамы и господа, бот больше не работает");
+                break;
+            case 4:
+                await Send($"Ты сейчас бан получишь");
+                break;
+            default:
+                await Send($"<b>BAN</b>\n\nВы получили бан за плохое поведение и попытку протестировать бота для квиза\n\n<span class=\"tg-spoiler\">Шутка. Продолжай отвечать введя /question</span>");
+                break;
+        }
+
+        gagUnknown.CountOfUnknowns++;
     }
 
     [Action]

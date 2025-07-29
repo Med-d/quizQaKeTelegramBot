@@ -31,7 +31,7 @@ public class QuestionService
         if (availableQuestion == null)
             return null;
 
-        var fakeAnswers = fakeAnswerGenerator.GenerateFakeAnswers(3).ToArray();
+        var fakeAnswers = fakeAnswerGenerator.GenerateFakeAnswers(3, availableQuestion).ToArray();
         var newAnswer = new Answer
         {
             UserId = user.Id,
