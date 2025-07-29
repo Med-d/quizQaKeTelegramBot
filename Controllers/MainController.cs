@@ -263,22 +263,22 @@ public class MainController(IUnitOfWork unitOfWork, CsvQuestionsExporter csvExpo
         await Send(sb.ToString());
     }
 
-    [Action("/migrate_questions")]
-    public async Task MigrateQuestions()
-    {
-        // Путь к CSV-файлу можно заменить на актуальный
-        string csvPath = "./questions.csv";
-        var questions = csvExporter.ImportQuestionsFromCsv(csvPath);
-        // Очищаем старые вопросы
-        foreach (var q in unitOfWork.Questions.GetAll())
-        {
-            unitOfWork.Questions.Remove(q);
-        }
-        foreach (var q in questions)
-        {
-            unitOfWork.Questions.Add(q);
-        }
-        unitOfWork.SaveChanges();
-        await Send($"Questions migrated: {questions.Length}");
-    }
+    // [Action("/migrate_questions")]
+    // public async Task MigrateQuestions()
+    // {
+    //     // Путь к CSV-файлу можно заменить на актуальный
+    //     string csvPath = "./questions.csv";
+    //     var questions = csvExporter.ImportQuestionsFromCsv(csvPath);
+    //     // Очищаем старые вопросы
+    //     foreach (var q in unitOfWork.Questions.GetAll())
+    //     {
+    //         unitOfWork.Questions.Remove(q);
+    //     }
+    //     foreach (var q in questions)
+    //     {
+    //         unitOfWork.Questions.Add(q);
+    //     }
+    //     unitOfWork.SaveChanges();
+    //     await Send($"Questions migrated: {questions.Length}");
+    // }
 }
